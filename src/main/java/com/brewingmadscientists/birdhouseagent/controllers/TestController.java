@@ -1,5 +1,6 @@
 package com.brewingmadscientists.birdhouseagent.controllers;
 
+import com.brewingmadscientists.birdhouseagent.dto.CameraSettings;
 import com.brewingmadscientists.birdhouseagent.services.CameraService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -23,8 +24,8 @@ public class TestController {
     }
 
     @PostMapping("/config")
-    public void config() {
-        cameraService.config();
+    public void config(CameraSettings cameraSettings) {
+        cameraService.config(cameraSettings);
     }
 
     @GetMapping(
