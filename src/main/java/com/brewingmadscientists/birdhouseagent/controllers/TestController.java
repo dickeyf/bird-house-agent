@@ -4,10 +4,7 @@ import com.brewingmadscientists.birdhouseagent.dto.CameraSettings;
 import com.brewingmadscientists.birdhouseagent.services.CameraService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.DeferredResult;
 import uk.co.caprica.picam.CaptureFailedException;
 import uk.co.caprica.picam.PictureCaptureHandler;
@@ -24,7 +21,7 @@ public class TestController {
     }
 
     @PostMapping("/config")
-    public void config(CameraSettings cameraSettings) throws Exception {
+    public void config(@RequestBody CameraSettings cameraSettings) throws Exception {
         cameraService.config(cameraSettings);
     }
 
