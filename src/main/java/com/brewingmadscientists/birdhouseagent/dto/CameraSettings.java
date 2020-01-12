@@ -12,7 +12,6 @@ public class CameraSettings {
     private Encoding encoding;
     private Integer quality;
     private StereoscopicMode stereoscopicMode;
-    private Boolean decimate;
     private Boolean swapEyes;
     private Integer brightness;
     private Integer contrast;
@@ -32,9 +31,4 @@ public class CameraSettings {
     private Mirror mirror;
     private Integer rotation;
     private java.awt.geom.Rectangle2D.Float crop;
-    private Integer delay;
-    private Boolean colourEffect;
-    private Integer u;
-    private Integer v;
-    private Integer captureTimeout;
 }

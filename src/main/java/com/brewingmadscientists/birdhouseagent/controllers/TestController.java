@@ -24,7 +24,7 @@ public class TestController {
     }
 
     @PostMapping("/config")
-    public void config(CameraSettings cameraSettings) {
+    public void config(CameraSettings cameraSettings) throws Exception {
         cameraService.config(cameraSettings);
     }
 
