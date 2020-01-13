@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    stream:
+      bindings:
+        heartbeat:
+          destination: dickeycloud/birdhouse/agentHb/v1/1
+          binder: local_solace
+        picture:
+          destination: dickeycloud/birdhouse/picture/v1/1
+          binder: local_solace
+      binders:
+        local_solace:
+          type: solace
+          environment:
+            solace:
+              java:
+                host: tcp://host:port
+                msgVpn: default
+                clientUsername: birdhouseagent
+                clientPassword: password
+                connectRetries: -1
+                reconnectRetries: -1

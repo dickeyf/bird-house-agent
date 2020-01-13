@@ -1,6 +1,10 @@
 package com.brewingmadscientists.birdhouseagent.services;
 
 import com.brewingmadscientists.birdhouseagent.dto.CameraSettings;
+import com.brewingmadscientists.birdhouseagent.streams.sources.PictureSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import uk.co.caprica.picam.Camera;
 import uk.co.caprica.picam.CameraConfiguration;
@@ -10,23 +14,106 @@ import uk.co.caprica.picam.enums.AutomaticWhiteBalanceMode;
 import uk.co.caprica.picam.enums.Encoding;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import java.io.ByteArrayOutputStream;
 
 import static uk.co.caprica.picam.CameraConfiguration.cameraConfiguration;
 
 @Service
-public class CameraService {
+public class CameraService implements Runnable {
+    private Thread thread;
+    private volatile boolean exitSignal;
+
+    class PictureHandler implements PictureCaptureHandler {
+
+        private ByteArrayOutputStream out;
+
+        @Override
+        public void begin() {
+            out = new ByteArrayOutputStream();
+        }
+
+        @Override
+        public void pictureData(byte[] data) throws Exception {
+            out.write(data);
+        }
+
+        @Override
+        public void end() {
+            lastPicture = out.toByteArray();
+            storePicture(lastPicture);
+            pictureSource.sendPicture(getLastPicture());
+        }
+
+        @Override
+        public byte[] result() {
+            return out.toByteArray();
+        }
+    }
+
     Camera camera = null;
+    byte[] lastPicture = null;
+    PictureHandler pictureHandler = new PictureHandler();
+    PictureSource pictureSource;
+
+    @Autowired
+    CameraService(PictureSource pictureSource) {
+        this.pictureSource = pictureSource;
+    }
+
+    private synchronized void storePicture(byte[] picture) {
+        lastPicture = picture;
+    }
 
     @PostConstruct
-    public void init() throws Exception {
+    public synchronized void init() throws Exception {
         config(new CameraSettings());
     }
 
-    public void takePicture(PictureCaptureHandler pictureCaptureHandler) throws CaptureFailedException {
+    @PreDestroy
+    public void destroy() throws InterruptedException {
+        exitSignal = true;
+        thread.join();
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public synchronized void start() throws CaptureFailedException {
+        exitSignal = false;
+        thread = new Thread(this);
+        thread.start();
+    }
+
+    @Override
+    public void run() {
+        int errorCount = 0;
+        while (!exitSignal) {
+            try {
+                takePicture(pictureHandler);
+            } catch (CaptureFailedException e) {
+                e.printStackTrace();
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException ex) {
+                    return;
+                }
+                if (++errorCount>10) {
+                    return;
+                }
+            }
+        }
+    }
+
+    public synchronized void takePicture(PictureCaptureHandler pictureCaptureHandler) throws CaptureFailedException {
         camera.takePicture(pictureCaptureHandler);
     }
 
-    public void config(CameraSettings cameraSettings) throws Exception {
+    public synchronized byte[] getLastPicture() {
+        byte[] lastPictureCopy = lastPicture.clone();
+        return lastPictureCopy;
+    }
+
+    public synchronized void config(CameraSettings cameraSettings) throws Exception {
         if (camera!=null) {
             camera.close();
         }

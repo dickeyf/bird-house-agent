@@ -2,6 +2,7 @@ package com.brewingmadscientists.birdhouseagent.controllers;
 
 import com.brewingmadscientists.birdhouseagent.dto.CameraSettings;
 import com.brewingmadscientists.birdhouseagent.services.CameraService;
+import com.brewingmadscientists.birdhouseagent.streams.sources.PictureSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,7 @@ public class TestController {
     CameraService cameraService;
 
     @Autowired
-    public TestController(CameraService cameraService) {
+    public TestController(CameraService cameraService, PictureSource pictureSource) {
         this.cameraService = cameraService;
     }
 
@@ -30,33 +31,7 @@ public class TestController {
             produces= MediaType.IMAGE_JPEG_VALUE
     )
     @ResponseBody
-    public DeferredResult<byte[]> getPicture() throws CaptureFailedException {
-        DeferredResult<byte[]> result = new DeferredResult<>();
-
-        cameraService.takePicture(new PictureCaptureHandler() {
-            private ByteArrayOutputStream out;
-
-            @Override
-            public void begin() throws Exception {
-                out = new ByteArrayOutputStream();
-            }
-
-            @Override
-            public void pictureData(byte[] data) throws Exception {
-                out.write(data);
-            }
-
-            @Override
-            public void end() throws Exception {
-                result.setResult(result());
-            }
-
-            @Override
-            public byte[] result() {
-                return out.toByteArray();
-            }
-        });
-
-        return result;
+    public byte[] getPicture() {
+        return cameraService.getLastPicture();
     }
 }
