@@ -1,6 +1,7 @@
 package com.brewingmadscientists.birdhouseagent.streams.sources;
 
-import com.brewingmadscientists.birdhouseagent.dto.BirdHouseAgentHeartbeat;
+import com.brewingmadscientists.birdhouseagent.dto.BirdHouseAgentHeartbeatDTO;
+import com.brewingmadscientists.birdhouseagent.streams.BirdHouseChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.annotation.EnableBinding;
@@ -15,9 +16,10 @@ public class HeartbeatSource {
 
     private static final int agentIdentifier = 1;
 
+    //Sends an Heartbeat every 5 seconds
     @InboundChannelAdapter(channel = BirdHouseChannel.HEARTBEAT, poller = @Poller(fixedRate = "5000"))
-    public BirdHouseAgentHeartbeat sendHeartbeat() {
-        BirdHouseAgentHeartbeat heartbeat = new BirdHouseAgentHeartbeat(agentIdentifier);
+    public BirdHouseAgentHeartbeatDTO sendHeartbeat() {
+        BirdHouseAgentHeartbeatDTO heartbeat = new BirdHouseAgentHeartbeatDTO(agentIdentifier);
 
         log.info("Emitting heartbeat " + heartbeat.getTimestamp().toString());
 

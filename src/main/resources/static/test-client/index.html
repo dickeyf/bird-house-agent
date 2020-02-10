@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <title>Birdhouse testing app</title>
+    <meta charset="utf-8"/>
+
+    <!-- Load Solace Web Messaging API for JavaScript -->
+    <script src="lib/solclient-debug.js"></script>
+
+    <!-- Load the PublishSubscribe Topic Subscriber tutorial -->
+    <script src="BirdHouseInterface.js"></script>
+
+    <!-- Execute the PublishSubscribe Topic Subscriber tutorial -->
+    <script>
+      var subscriber = null;
+      window.onload = function () {
+        // Initialize factory with the most recent API defaults
+        var factoryProps = new solace.SolclientFactoryProperties();
+        factoryProps.profile = solace.SolclientFactoryProfiles.version10;
+        solace.SolclientFactory.init(factoryProps);
+
+        // enable logging to JavaScript console at WARN level
+        // NOTICE: works only with "solclientjs-debug.js"
+        solace.SolclientFactory.setLogLevel(solace.LogLevel.WARN);
+
+        // create the subscriber, specifying name of the subscription topic
+        let birdHouseInterface = new BirdHouseInterface(1);
+        onConnectClick = function() {
+          var brokerUrl = document.getElementById('hosturl').value;
+          var msgVpnName = document.getElementById('message-vpn').value;
+          var username = document.getElementById('username').value;
+          var password = document.getElementById('password').value;
+          birdHouseInterface.connect(brokerUrl, msgVpnName, username, password);
+        };
+
+        // assign buttons to the subscriber functions
+        document.getElementById("connect").addEventListener("click", onConnectClick);
+        document.getElementById("disconnect").addEventListener("click", birdHouseInterface.disconnect);
+        document.getElementById("takePicture").addEventListener("click", birdHouseInterface.takePicture);
+      };
+    </script>
+  </head>
+
+  <body>
+    <div class="doc-body">
+      <h2>Birdhouse client</h2>
+
+      <form class="pure-form pure-form-aligned">
+        <fieldset>
+          <h3>PubSub+ Connection settings</h3>
+
+          <div class="pure-control-group">
+            <label for="hosturl">Solace router host url</label>
+            <input value="https://vmrweb.dickey.cloud" id="hosturl" type="text" placeholder="<protocol://host[:port]>">
+          </div>
+
+          <div class="pure-control-group">
+            <label for="message-vpn">Message-vpn</label>
+            <input value="default" id="message-vpn" type="text" placeholder="Message VPN" value="default">
+          </div>
+
+          <div class="pure-control-group">
+            <label for="username">Username</label>
+            <input value="birdhouseagent" id="username" type="text" placeholder="Username">
+          </div>
+
+          <div class="pure-control-group">
+            <label for="password">Password</label>
+            <input value="1Pigeon!" id="password" type="password" placeholder="Password">
+          </div>
+          <p>
+            <button type="button" class="pure-button pure-button-primary" id="connect">Connect</button>
+            <button type="button" class="pure-button button-error" id="disconnect">Disconnect</button>
+          </p>
+        </fieldset>
+
+        <h2>Controls:</h2>
+        <button type="button" class="pure-button button-error" id="takePicture">Take a picture</button>
+
+        <h2>Video stream:</h2>
+        <img border="1" width="640" height="480" id="video"/>
+
+        <h2>Last picture taken:</h2>
+        <img border="1" width="1024" height="768" id="picture"/>
+      </form>
+
+    </div>
+
+  </body>
+
+</html>

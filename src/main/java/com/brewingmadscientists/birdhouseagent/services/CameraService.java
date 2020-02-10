@@ -1,6 +1,6 @@
 package com.brewingmadscientists.birdhouseagent.services;
 
-import com.brewingmadscientists.birdhouseagent.dto.CameraSettings;
+import com.brewingmadscientists.birdhouseagent.dto.CameraSettingsDTO;
 import com.brewingmadscientists.birdhouseagent.streams.sources.PictureSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -12,6 +12,8 @@ import uk.co.caprica.picam.CaptureFailedException;
 import uk.co.caprica.picam.PictureCaptureHandler;
 import uk.co.caprica.picam.enums.AutomaticWhiteBalanceMode;
 import uk.co.caprica.picam.enums.Encoding;
+import uk.co.caprica.picam.enums.ExposureMeteringMode;
+import uk.co.caprica.picam.enums.ExposureMode;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -41,9 +43,33 @@ public class CameraService implements Runnable {
 
         @Override
         public void end() {
-            lastPicture = out.toByteArray();
             storePicture(lastPicture);
-            pictureSource.sendPicture(getLastPicture());
+            pictureSource.sendPicture(result());
+        }
+
+        @Override
+        public byte[] result() {
+            return out.toByteArray();
+        }
+    }
+
+    class PreviewHandler implements PictureCaptureHandler {
+
+        private ByteArrayOutputStream out;
+
+        @Override
+        public void begin() {
+            out = new ByteArrayOutputStream();
+        }
+
+        @Override
+        public void pictureData(byte[] data) throws Exception {
+            out.write(data);
+        }
+
+        @Override
+        public void end() {
+            pictureSource.sendPreview(result());
         }
 
         @Override
@@ -55,7 +81,9 @@ public class CameraService implements Runnable {
     Camera camera = null;
     byte[] lastPicture = null;
     PictureHandler pictureHandler = new PictureHandler();
+    PreviewHandler previewHandler = new PreviewHandler();
     PictureSource pictureSource;
+    CameraConfiguration lastPreviewConfig=null;
 
     @Autowired
     CameraService(PictureSource pictureSource) {
@@ -68,7 +96,7 @@ public class CameraService implements Runnable {
 
     @PostConstruct
     public synchronized void init() throws Exception {
-        config(new CameraSettings());
+        previewConfig(new CameraSettingsDTO());
     }
 
     @PreDestroy
@@ -89,7 +117,7 @@ public class CameraService implements Runnable {
         int errorCount = 0;
         while (!exitSignal) {
             try {
-                takePicture(pictureHandler);
+                takePreviewPicture();
             } catch (CaptureFailedException e) {
                 e.printStackTrace();
                 try {
@@ -104,27 +132,45 @@ public class CameraService implements Runnable {
         }
     }
 
-    public synchronized void takePicture(PictureCaptureHandler pictureCaptureHandler) throws CaptureFailedException {
-        camera.takePicture(pictureCaptureHandler);
+    public synchronized void takePreviewPicture() throws CaptureFailedException {
+        camera.takePicture(previewHandler);
     }
 
-    public synchronized byte[] getLastPicture() {
-        byte[] lastPictureCopy = lastPicture.clone();
-        return lastPictureCopy;
-    }
-
-    public synchronized void config(CameraSettings cameraSettings) throws Exception {
-        if (camera!=null) {
-            camera.close();
-        }
-
+    //Take a high quality picture
+    public synchronized void takePicture(CameraSettingsDTO settingsDTO) throws Exception {
         CameraConfiguration config = cameraConfiguration()
                 .width(2592)
                 .height(1944)
                 .automaticWhiteBalance(AutomaticWhiteBalanceMode.AUTO)
+                .exposureMode(ExposureMode.AUTO)
+                //.exposureMeteringMode(ExposureMeteringMode.MATRIX)
                 .encoding(Encoding.JPEG)
                 .quality(100);
 
+        if (settingsDTO!=null) {
+            config = applySettings(config, settingsDTO);
+        }
+
+        if (camera!=null) {
+            camera.close();
+        }
+
+        camera = new Camera(config);
+        camera.takePicture(pictureHandler);
+        camera.close();
+        camera = new Camera(lastPreviewConfig);
+    }
+
+    public synchronized byte[] getLastPicture() {
+        if (lastPicture!=null) {
+            byte[] lastPictureCopy = lastPicture.clone();
+            return lastPictureCopy;
+        } else {
+            return null;
+        }
+    }
+
+    private CameraConfiguration applySettings(CameraConfiguration config, CameraSettingsDTO cameraSettings) {
         if (cameraSettings.getBrightness()!=null) {
             config.brightness(cameraSettings.getBrightness());
         }
@@ -210,6 +256,34 @@ public class CameraService implements Runnable {
             config.vdieoStabilsation(cameraSettings.getVideoStabilisation());
         }
 
-        camera = new Camera(config);
+        return config;
+    }
+
+    public synchronized void previewConfig(CameraSettingsDTO cameraSettings) throws Exception {
+        if (camera!=null) {
+            camera.close();
+        }
+
+        CameraConfiguration previewConfig = cameraConfiguration()
+                .width(640)
+                .height(480)
+                .automaticWhiteBalance(AutomaticWhiteBalanceMode.AUTO)
+                .encoding(Encoding.JPEG)
+                .quality(100);
+
+        previewConfig = applySettings(previewConfig, cameraSettings);
+
+        try {
+            camera = new Camera(previewConfig);
+        } catch (Exception e) {
+            if (lastPreviewConfig==null) {
+                throw e;
+            } else {
+                //Recover the camera using last known safe settings
+                camera = new Camera(lastPreviewConfig);
+            }
+        }
+
+        lastPreviewConfig = previewConfig;
     }
 }
