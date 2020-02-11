@@ -53,6 +53,32 @@ var BirdHouseInterface = function (birdHouseId) {
                     1, // correlation key
                     10000 // 10 seconds timeout for this operation
                 );
+            } else if (sessionEvent.correlationKey == 1) {
+                console.log("Subscribed successfully to dickeycloud/birdhouse/previews/v1/"+birdHouseId);
+                console.log("Subscribing to dickeycloud/birdhouse/motion/v1/"+birdHouseId);
+                birdHouseInterface.session.subscribe(
+                    solace.SolclientFactory.createTopicDestination("dickeycloud/birdhouse/motion/v1/"+birdHouseId),
+                    true, // generate confirmation when subscription is added successfully
+                    2, // correlation key
+                    10000 // 10 seconds timeout for this operation
+                );
+            } else {
+                //All subscriptions are UP.  We are thus ready.
+                birdHouseInterface.state = BirdHouseInterface.States.READY;
+                console.log("Subscribed successfully to dickeycloud/birdhouse/motion/v1/"+birdHouseId);
+                console.log("Birdhouse interface READY.");
+            }
+        });
+        birdHouseInterface.session.on(solace.SessionEventCode.SUBSCRIPTION_OK, function (sessionEvent) {
+            console.log("Subscribed successfully to dickeycloud/birdhouse/picture/v1/"+birdHouseId);
+            console.log("Subscribing to dickeycloud/birdhouse/picture/v1/"+birdHouseId);
+            if (sessionEvent.correlationKey == 0) {
+                birdHouseInterface.session.subscribe(
+                    solace.SolclientFactory.createTopicDestination("dickeycloud/birdhouse/previews/v1/"+birdHouseId),
+                    true, // generate confirmation when subscription is added successfully
+                    1, // correlation key
+                    10000 // 10 seconds timeout for this operation
+                );
             } else {
                 //Both subscriptions are UP.  We are thus ready.
                 birdHouseInterface.state = BirdHouseInterface.States.READY;
@@ -72,6 +98,10 @@ var BirdHouseInterface = function (birdHouseId) {
                 case "dickeycloud/birdhouse/picture/v1/1":
                     var image = document.getElementById("picture");
                     image.src = "data:image/jpeg;base64,"+picture.picture;
+                    break;
+                case "dickeycloud/birdhouse/motion/v1/1":
+                    var paragraph = document.getElementById("motion");
+                    paragraph.innerHTML = picture.timestamp + " stdDev: " + picture.stdDev;
                     break;
             }
         });
