@@ -269,6 +269,7 @@ public class CameraService implements Runnable {
                 .height(480)
                 .automaticWhiteBalance(AutomaticWhiteBalanceMode.AUTO)
                 .encoding(Encoding.JPEG)
+                .captureTimeout(2000)
                 .quality(100);
 
         previewConfig = applySettings(previewConfig, cameraSettings);

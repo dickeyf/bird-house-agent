@@ -1,0 +1,10 @@
+[Unit]
+Description=A Spring Boot application
+After=syslog.target
+ 
+[Service]
+User=pi
+ExecStart=/home/pi/birdhouseagent/start.sh
+ 
+[Install] 
+WantedBy=multi-user.target
